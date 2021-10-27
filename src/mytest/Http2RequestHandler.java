@@ -16,33 +16,14 @@
 
 package mytest;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
-import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.codec.http.FullHttpRequest;
-import io.netty.handler.codec.http.FullHttpResponse;
-import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.codec.http2.Http2SecurityUtil;
+import io.netty.handler.codec.http.*;
 import io.netty.handler.codec.http2.HttpConversionUtil;
-import io.netty.handler.codec.http2.InboundHttp2ToHttpAdapter;
-import io.netty.handler.ssl.*;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
-import javax.net.ssl.SSLException;
-import java.io.Console;
 import java.util.concurrent.TimeUnit;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 //import static io.netty.example.http2.Http2ExampleUtil.firstValue;
 //import static io.netty.example.http2.Http2ExampleUtil.toInt;
-import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
-import static io.netty.handler.codec.http.HttpResponseStatus.OK;
-import static io.netty.handler.codec.http.HttpUtil.setContentLength;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static java.lang.Integer.parseInt;
 
 public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
@@ -55,56 +36,77 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
     public MyClient myClient = null;
 
 
-    @Override
-    public void channelActive(ChannelHandlerContext ctx) {
-        try {
-            super.channelActive(ctx);
-//            if(!myClient.isConnected)
-//                myClient.Connect(ctx);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void channelRegistered(ChannelHandlerContext ctx) {
-        //get session from ctx.channel and pass it to ServerA.session
-        try {
-            super.channelRegistered(ctx);
-//            if(!myClient.isConnected)
-//                myClient.Connect(ctx);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+//    @Override
+//    public void channelActive(ChannelHandlerContext ctx) {
+//        try {
+//            super.channelActive(ctx);
+////            if(!myClient.isConnected)
+////                myClient.Connect(ctx);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
+//
+//    @Override
+//    public void channelRegistered(ChannelHandlerContext ctx) {
+//        //get session from ctx.channel and pass it to ServerA.session
+//        try {
+//            super.channelRegistered(ctx);
+////            if(!myClient.isConnected)
+////                myClient.Connect(ctx);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
+//    }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) {
         QueryStringDecoder queryString = new QueryStringDecoder(request.uri());
         if (!myClient.isConnected) {
+            myClient.isQSeed = "/getId".equals(queryString);
             //new Thread(() -> myClient.Connect(ctx)).start();
-            myClient.Connect();
+            myClient.connect();
         }
-        while (myClient.connectFuture == null || !myClient.connectFuture.isDone()) {
+        while (myClient.clientChannel == null || !myClient.connectFuture.isDone()) {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
             }
         }
-        if (myClient.connectFuture != null && myClient.connectFuture.isDone()) {
-            String streamId = streamId(request);
-        }
 
+        String streamId = streamId(request);
         //  TODO: bla bla blah
+        FullHttpResponse response = myClient.forward(request, Integer.parseInt(streamId));
+
+        streamId(response, streamId);
+        ctx.writeAndFlush(response);    //  hit
+
+        if(request.refCnt() > 1)
+            request.release(request.refCnt() - 1);  // 这里断点不该命中
+        else if(request.refCnt() <= 0)
+            request.retain();   // 会抛异常。谁吃了msg？？
     }
 
     private static String streamId(FullHttpRequest request) {
         return request.headers().get(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text());
     }
 
+    private static void streamId(FullHttpResponse response, String streamId) {
+        response.headers().set(HttpConversionUtil.ExtensionHeaderNames.STREAM_ID.text(), streamId);
+    }
+
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         cause.printStackTrace();
         ctx.close();
+    }
+
+    @Override
+    public void channelRead(ChannelHandlerContext ctx, Object msg){
+        try {
+            super.channelRead(ctx, msg);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

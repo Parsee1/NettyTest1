@@ -27,6 +27,7 @@ import io.netty.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 
 import javax.net.ssl.SSLException;
+import java.io.File;
 import java.security.cert.CertificateException;
 
 import static io.netty.handler.codec.http2.Http2SecurityUtil.CIPHERS;
@@ -62,7 +63,7 @@ public class Http2Server {
     }
 
     private static SslContext configureTLS() throws CertificateException, SSLException {
-        SelfSignedCertificate ssc = new SelfSignedCertificate();
+
         ApplicationProtocolConfig apn = new ApplicationProtocolConfig(
                 Protocol.ALPN,
                 // NO_ADVERTISE is currently the only mode supported by both OpenSsl and JDK providers.
@@ -72,7 +73,11 @@ public class Http2Server {
                 ApplicationProtocolNames.HTTP_2,
                 ApplicationProtocolNames.HTTP_1_1);
 
-        return SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
+//        SelfSignedCertificate ssc = new SelfSignedCertificate();
+//        return SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey(), null)
+        return SslContextBuilder.forServer(
+                new File("F:\\IL_Spy\\Certs2021\\IDOLY_Certs\\_.game_idolypride.jp_sign.cer"),
+                new File("F:\\IL_Spy\\Certs2021\\IDOLY_Certs\\_.game_idolypride.jp_sign.pkcs8"), null)
                                 .ciphers(CIPHERS, SupportedCipherSuiteFilter.INSTANCE)
                                 .applicationProtocolConfig(apn).build();
     }

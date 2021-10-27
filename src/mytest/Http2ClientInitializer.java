@@ -63,7 +63,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         responseHandler = new HttpResponseHandler();
         settingsHandler = new Http2SettingsHandler(ch.newPromise());
 //        if (sslCtx != null) {
-            configureSsl(ch);
+        configureSsl(ch);
 //        } else {
 //            configureClearText(ch);
 //        }
@@ -108,16 +108,16 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
     /**
      * Configure the pipeline for a cleartext upgrade from HTTP to HTTP/2.
      */
-    private void configureClearText(SocketChannel ch) {
-        HttpClientCodec sourceCodec = new HttpClientCodec();
-        Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(connectionHandler);
-        HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 65536);
-
-        ch.pipeline().addLast(sourceCodec,
-                              upgradeHandler,
-                              new UpgradeRequestHandler(),
-                              new UserEventLogger());
-    }
+//    private void configureClearText(SocketChannel ch) {
+//        HttpClientCodec sourceCodec = new HttpClientCodec();
+//        Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(connectionHandler);
+//        HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 65536);
+//
+//        ch.pipeline().addLast(sourceCodec,
+//                upgradeHandler,
+//                new UpgradeRequestHandler(),
+//                new UserEventLogger());
+//    }
 
     /**
      * A handler that triggers the cleartext upgrade to HTTP/2 by sending an initial HTTP request.
